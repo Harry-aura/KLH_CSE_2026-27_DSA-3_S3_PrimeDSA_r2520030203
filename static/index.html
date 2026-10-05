@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrimeDSA | 1024-Bit Miller–Rabin Primality Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js for benchmark visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-background"></div>
+    <div class="grid-overlay"></div>
+
+    <div class="app-container">
+        <!-- Top Navigation Bar -->
+        <header class="navbar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-title">Prime<span>DSA</span></div>
+                    <div class="brand-subtitle">1024-Bit Miller–Rabin Primality Engine</div>
+                </div>
+            </div>
+
+            <nav class="nav-tabs">
+                <button class="nav-tab active" data-tab="validator-tab">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Primality Validator
+                </button>
+                <button class="nav-tab" data-tab="benchmark-tab">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                    Performance Benchmark
+                </button>
+                <button class="nav-tab" data-tab="theory-tab">
+                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    Theory & Algorithm
+                </button>
+            </nav>
+
+            <div class="header-badges">
+                <div class="status-chip" id="api-status-chip">
+                    <span class="status-dot"></span>
+                    <span>API Connected</span>
+                </div>
+                <div class="status-chip highlight">
+                    <span>1024-Bit BigInt Ready</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Body -->
+        <main class="main-content">
+            <!-- TAB 1: VALIDATOR -->
+            <section id="validator-tab" class="tab-pane active">
+                <div class="validator-layout">
+                    <!-- Left Column: Input & Controls -->
+                    <div class="card input-card">
+                        <div class="card-header">
+                            <div class="card-title-group">
+                                <span class="badge-tag">Arbitrary-Precision Input</span>
+                                <h2>Integer Under Test</h2>
+                            </div>
+                            <!-- Live input statistics -->
+                            <div class="input-stats">
+                                <span class="stat-pill"><strong id="stat-bits">0</strong> bits</span>
+                                <span class="stat-pill"><strong id="stat-digits">0</strong> digits</span>
+                            </div>
+                        </div>
+
+                        <!-- BigInt Input Box -->
+                        <div class="input-wrapper">
+                            <textarea id="number-input" class="bigint-input" placeholder="Paste or type an integer up to 1024 bits (or click a preset below)..." spellcheck="false"></textarea>
+                            <div class="input-actions-floating">
+                                <button class="btn-icon" id="btn-copy-input" title="Copy to clipboard">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                </button>
+                                <button class="btn-icon" id="btn-clear-input" title="Clear input">
+                                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Presets Category Bar -->
+                        <div class="presets-section">
+                            <div class="presets-header">
+                                <span class="section-label">Quick Test Vectors & Presets:</span>
+                                <select id="presets-filter" class="custom-select">
+                                    <option value="all">All Presets</option>
+                                    <option value="primes">Known Primes (128 - 1024 bit)</option>
+                                    <option value="mersenne">Mersenne Primes</option>
+                                    <option value="carmichael">Carmichael Pseudoprimes</option>
+                                    <option value="composites">Composite Numbers</option>
+                                </select>
+                            </div>
+                            <div class="preset-chips-container" id="preset-chips">
+                                <!-- Populated dynamically by app.js -->
+                            </div>
+                        </div>
+
+                        <!-- Parameters & Controls -->
+                        <div class="controls-grid">
+                            <div class="control-box">
+                                <div class="control-label-row">
+                                    <label for="iterations-slider">Miller–Rabin Rounds ($k$):</label>
+                                    <span class="control-val" id="iterations-val">40 rounds</span>
+                                </div>
+                                <input type="range" id="iterations-slider" min="1" max="100" value="40" class="custom-range">
+                                <div class="confidence-preview">
+                                    <span>Error Probability: <code id="conf-preview-error">≤ 2⁻⁸⁰ ≈ 8.27×10⁻²⁵</code></span>
+                                    <span>Confidence: <strong id="conf-preview-pct">≥ 99.9999999999999999999999%</strong></span>
+                                </div>
+                            </div>
+
+                            <div class="generator-box">
+                                <div class="control-label-row">
+                                    <label>Random Prime Generator:</label>
+                                </div>
+                                <div class="generator-row">
+                                    <select id="gen-bits-select" class="custom-select">
+                                        <option value="128">128 bits</option>
+                                        <option value="256">256 bits</option>
+                                        <option value="512">512 bits</option>
+                                        <option value="1024" selected>1024 bits</option>
+                                        <option value="2048">2048 bits</option>
+                                    </select>
+                                    <button class="btn btn-secondary" id="btn-generate-prime">
+                                        <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path></svg>
+                                        Generate Prime
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Advanced Options (Accordion) -->
+                        <details class="advanced-options">
+                            <summary>Advanced Engine Options</summary>
+                            <div class="options-content">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="chk-deterministic" checked>
+                                    <span>Use 64-bit Deterministic Base Sets ($n < 2^{64}$)</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="chk-custom-modpow">
+                                    <span>Use Custom Square-and-Multiply (Pure Python Modpow)</span>
+                                </label>
+                            </div>
+                        </details>
+
+                        <!-- Main Submit Button -->
+                        <button class="btn btn-primary btn-large" id="btn-check-prime">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" fill="none" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                            <span>Validate Primality (Miller–Rabin)</span>
+                        </button>
+                    </div>
+
+                    <!-- Right Column: Results & Diagnostics -->
+                    <div class="card results-card" id="results-card">
+                        <!-- Initial Empty State -->
+                        <div class="empty-state" id="empty-state">
+                            <div class="empty-icon">
+                                <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" fill="none" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg>
+                            </div>
+                            <h3>Awaiting Primality Analysis</h3>
+                            <p>Enter an arbitrary-precision integer up to 1024 bits, select a preset, or generate a random prime to start the Miller–Rabin engine.</p>
+                        </div>
+
+                        <!-- Active Results Container -->
+                        <div class="results-content hidden" id="results-content">
+                            <!-- Hero Banner Result -->
+                            <div class="result-hero" id="result-hero">
+                                <div class="result-badge-icon" id="hero-badge-icon">✓</div>
+                                <div class="result-hero-text">
+                                    <div class="result-status-title" id="hero-status-title">PROBABLE PRIME</div>
+                                    <div class="result-status-desc" id="hero-status-desc">Passed all 40 Miller–Rabin rounds with zero composite witnesses.</div>
+                                </div>
+                            </div>
+
+                            <!-- Metrics Grid (4 Core Tiles) -->
+                            <div class="metrics-grid">
+                                <div class="metric-tile">
+                                    <div class="metric-label">Execution Time</div>
+                                    <div class="metric-value highlight-cyan" id="metric-time">0.00 ms</div>
+                                    <div class="metric-sub" id="metric-time-detail">0 ns / 0 µs</div>
+                                </div>
+                                <div class="metric-tile">
+                                    <div class="metric-label">Confidence Level</div>
+                                    <div class="metric-value highlight-green" id="metric-confidence">99.9999%</div>
+                                    <div class="metric-sub" id="metric-confidence-sub">Error Bound: 4⁻⁴⁰</div>
+                                </div>
+                                <div class="metric-tile">
+                                    <div class="metric-label">Bit Length & Digits</div>
+                                    <div class="metric-value" id="metric-bits">1024 bits</div>
+                                    <div class="metric-sub" id="metric-digits">309 decimal digits</div>
+                                </div>
+                                <div class="metric-tile">
+                                    <div class="metric-label">Rounds & Method</div>
+                                    <div class="metric-value" id="metric-rounds">40 Rounds</div>
+                                    <div class="metric-sub" id="metric-method">Probabilistic MR</div>
+                                </div>
+                            </div>
+
+                            <!-- Carmichael Alert Banner (Shown if Carmichael Detected) -->
+                            <div class="carmichael-alert hidden" id="carmichael-alert">
+                                <div class="alert-icon">⚠️</div>
+                                <div class="alert-text">
+                                    <strong>Carmichael Number (Fermat Pseudoprime) Detected!</strong>
+                                    <span>This number passes Fermat's Little Theorem $a^{n-1} \equiv 1 \pmod n$ for all coprime bases, but was correctly proven composite by Miller–Rabin!</span>
+                                </div>
+                            </div>
+
+                            <!-- Witness & Divisor Callout (If Composite) -->
+                            <div class="witness-box hidden" id="witness-box">
+                                <div class="witness-title">Composite Witness / Divisor:</div>
+                                <div class="witness-value" id="witness-value">a = 2</div>
+                            </div>
+
+                            <!-- Mathematical Decomposition Accordion -->
+                            <div class="math-breakdown-card">
+                                <div class="breakdown-header">
+                                    <span>Algorithmic Decomposition: $n - 1 = 2^s \cdot d$</span>
+                                </div>
+                                <div class="decomposition-grid">
+                                    <div class="decomp-item">
+                                        <span class="decomp-label">Power of 2 ($s$):</span>
+                                        <span class="decomp-value" id="decomp-s">-</span>
+                                    </div>
+                                    <div class="decomp-item">
+                                        <span class="decomp-label">Odd Component ($d$):</span>
+                                        <span class="decomp-value code-font" id="decomp-d">-</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step-by-Step Round Trace Table -->
+                            <div class="trace-section">
+                                <div class="trace-header">
+                                    <span>Miller–Rabin Round Trace Diagnostics</span>
+                                </div>
+                                <div class="trace-table-wrapper">
+                                    <table class="trace-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Round</th>
+                                                <th>Base ($a$)</th>
+                                                <th>Initial $x = a^d \pmod n$</th>
+                                                <th>Status</th>
+                                                <th>Diagnosis</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="trace-table-body">
+                                            <!-- Injected dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: PERFORMANCE BENCHMARK -->
+            <section id="benchmark-tab" class="tab-pane">
+                <div class="benchmark-container">
+                    <div class="card benchmark-header-card">
+                        <div class="benchmark-intro">
+                            <h2>Miller–Rabin vs Trial Division Benchmark</h2>
+                            <p>Demonstrating the polynomial complexity $O(k \cdot \log^3 n) = O(k \cdot b^3)$ of Miller–Rabin versus the exponential wall $O(\sqrt{n}) = O(2^{b/2})$ of Trial Division.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-run-benchmark">
+                            <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Run Live Benchmark
+                        </button>
+                    </div>
+
+                    <div class="benchmark-grid">
+                        <!-- Chart Card -->
+                        <div class="card chart-card">
+                            <div class="chart-header">
+                                <h3>Execution Time vs Bit Length (Logarithmic Scale)</h3>
+                                <div class="chart-legend-custom">
+                                    <span class="legend-dot green"></span> Miller–Rabin
+                                    <span class="legend-dot red"></span> Trial Division
+                                </div>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="benchmarkChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Data Table Card -->
+                        <div class="card table-card">
+                            <div class="card-header">
+                                <h3>Comparative Performance Metrics</h3>
+                            </div>
+                            <div class="table-wrapper">
+                                <table class="benchmark-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Bits</th>
+                                            <th>Sample Prime</th>
+                                            <th>Miller–Rabin</th>
+                                            <th>Trial Division</th>
+                                            <th>Speedup Factor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="benchmark-tbody">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: THEORY & ALGORITHM -->
+            <section id="theory-tab" class="tab-pane">
+                <div class="theory-container">
+                    <div class="card theory-card">
+                        <h2>The Miller–Rabin Primality Test Engine</h2>
+                        <p class="lead">The Miller–Rabin test is the cornerstone of modern computational number theory and public-key cryptography (RSA, Diffie-Hellman, ECDSA key generation). It provides rapid probabilistic primality testing for arbitrary-precision integers of any size.</p>
+
+                        <div class="theory-grid">
+                            <div class="theory-box">
+                                <div class="theory-icon">⚡</div>
+                                <h3>1. Mathematical Foundation</h3>
+                                <p>By Fermat's Little Theorem, if $n$ is prime and $\gcd(a, n) = 1$, then $a^{n-1} \equiv 1 \pmod n$.</p>
+                                <p>Miller–Rabin strengthens this by factoring $n - 1 = 2^s \cdot d$ with $d$ odd. For prime $n$, the sequence:</p>
+                                <code>a^d, a^{2d}, a^{4d}, \dots, a^{2^s d} \pmod n</code>
+                                <p>must start with $1$, or end with $n-1$ before reaching $1$, because the only square roots of $1$ modulo prime $p$ are $\pm 1$.</p>
+                            </div>
+
+                            <div class="theory-box">
+                                <div class="theory-icon">🛡️</div>
+                                <h3>2. Carmichael Numbers Resilience</h3>
+                                <p>Carmichael numbers (e.g. $561 = 3 \times 11 \times 17$) satisfy $a^{n-1} \equiv 1 \pmod n$ for all coprime $a$, completely breaking naive Fermat primality tests.</p>
+                                <p>Miller–Rabin detects the presence of non-trivial square roots of $1$, ensuring at least $75\%$ of all possible bases $a \in [2, n-2]$ act as witnesses to compositeness for <em>every</em> composite number without exception.</p>
+                            </div>
+
+                            <div class="theory-box">
+                                <div class="theory-icon">🎯</div>
+                                <h3>3. Error Probability & Confidence</h3>
+                                <p>For any composite integer $n$, the probability that a randomly chosen base $a$ fails to detect compositeness is at most $\frac{1}{4}$.</p>
+                                <p>After $k$ independent randomized rounds, the probability of false primality is:</p>
+                                <code>P(\text{False Prime}) \le 4^{-k} = 2^{-2k}</code>
+                                <p>For $k = 40$ rounds, $P(\text{error}) \le 2^{-80} \approx 8.27 \times 10^{-25}$, delivering cryptographic certainty $> 99.9999999999999999999999\%$.</p>
+                            </div>
+
+                            <div class="theory-box">
+                                <div class="theory-icon">⏱️</div>
+                                <h3>4. Time Complexity Analysis</h3>
+                                <table class="mini-table">
+                                    <tr>
+                                        <td><strong>Trial Division:</strong></td>
+                                        <td>$O(\sqrt{n}) = O(2^{b/2})$ (Exponential)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Miller–Rabin:</strong></td>
+                                        <td>$O(k \cdot \log^3 n) = O(k \cdot b^3)$ (Polynomial)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>1024-Bit Trial Div:</strong></td>
+                                        <td>$\approx 10^{140}$ years (Infeasible)</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>1024-Bit Miller–Rabin:</strong></td>
+                                        <td>$< 5\text{ ms}$ (Real-Time)</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-left">
+                PrimeDSA &copy; 2026 &bull; Advanced Algorithmic Primality Testing Service
+            </div>
+            <div class="footer-right">
+                <span>FastAPI + Miller–Rabin Engine</span>
+                <span class="separator">&bull;</span>
+                <span>Cryptographic $k=40$ ($1 - 2^{-80}$)</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Notification Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
